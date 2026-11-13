@@ -1,0 +1,20 @@
+ProxMenux — internal fork with Netdata as the monitoring data source
+
+Original work:  ProxMenux by MacRimi and contributors
+                https://github.com/MacRimi/ProxMenux  (GPL-3.0, see LICENSE)
+Base version:   v1.2.8 (commit 8fe9d207)
+
+This fork is distributed under the same license, GNU GPL v3.0.
+
+Changes made in this fork (see git history for details):
+  * docs/analysis.md            analysis and decisions for the Netdata integration
+  * netdata-deploy/             offline install/config scripts for Netdata
+                                (Parent, Proxmox host and guest children, alerts, email)
+  * AppImage/ (planned)         Netdata data provider and new multi-server sections
+
+Third-party software used, not included in this repository:
+  * Netdata Agent  https://github.com/netdata/netdata  (GPL-3.0).
+    Only the Netdata API is used. The Netdata dashboard UI, which is under the
+    Netdata Cloud UI License (NCUL1), is not modified or redistributed by this fork.
+  * msmtp          https://marlam.de/msmtp/  (GPL-3.0), installed from Debian packages.
+  * HPE ssacli     proprietary HPE tool, obtained from HPE by the operator.

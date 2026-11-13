@@ -151,10 +151,23 @@ node/guest in **one** HTTP call, cache it for 1 s, and serve all browser polls f
 | SMART | go.d `smartctl` | `smartctl.device_smart_status`, `device_temperature`, `device_power_on_time`, `device_*_errors_rate`, `device_smart_attr_*` | Disks behind Smart Array need `extra_devices: [{name: /dev/sda, type: cciss,0}, ...]`. **[VERIFY]** that `smartctl -d cciss,N` works on Gen10 in RAID mode (HBA mode would expose disks directly) |
 | Temps/fans/PSU | go.d `sensors`, `ipmi` plugin | `sensors.*`, `ipmi.*` | in-band IPMI needs `ipmi_si`/`ipmi_devintf` kernel modules. **[VERIFY]** |
 
-Note: `hpssa` collector exposes **status/temperature only**; it does not expose model, capacity or
-which physical drives make up which logical drive as metrics. Those may be available as **chart
-labels** — **[VERIFY]** in `/api/v3/contexts` output on a real host. If not, the RAID composition
-("qaysi disklardan tuzilgani") is a gap (needs real `ssacli` output).
+RAID composition **is available** through chart labels (`hpssa/charts.go`):
+
+* controller charts: `slot`, `model`
+* array charts: `slot`, `array_id`, `interface_type`, `array_type`
+* logical drive charts: `slot`, `array_id`, `logical_drive_id`, `disk_name`, `drive_type`
+* physical drive charts: `slot`, `array_id`, `logical_drive_id`, `location`, `interface_type`, `drive_type`, `model`
+
+So "logical drive X consists of physical drives at locations A, B, C" is a join on
+`logical_drive_id`. Drive **capacity** is not exposed by hpssa → take it from smartctl
+(`device_name`/`model_name`/`serial_number` labels) if the cciss mapping works. **[VERIFY]** label values
+with real `ssacli` output. Status values: each status chart has dimensions `ok`/`nok` (1 = current
+state); `nok` covers degraded/rebuilding/failed without distinguishing them — the exact text
+("Interim Recovery Mode", "Rebuilding") is not exported. **[VERIFY]** whether that is enough or a
+small parser of `ssacli` text is needed for the "rebuilding" label in the UI.
+
+`smartctl` via `ndsudo` accepts `--device cciss,N` (comma is in ndsudo's allowed character set);
+extra devices are keyed by `name|type`, so several `cciss,N` entries for the same `/dev/sdX` work.
 
 ### 2.3 Alerts
 
@@ -166,7 +179,7 @@ Already shipped with Netdata:
 
 **Not shipped**: there is **no `hpssa.conf` and no `smartctl` alert file** in `health.d/`. RAID degraded,
 physical drive failed, controller/battery failed, SMART failed alerts must be **written by us**
-(`health.d/hpe-raid.conf` in our config bundle).
+(`netdata-deploy/conf/health.d/proxmenux-hpe.conf`).
 
 Email: Netdata's `alarm-notify.sh` sends via `sendmail`; `msmtp-mta` provides a `sendmail` binary →
 configure `/etc/msmtprc` on the Parent.
@@ -175,8 +188,18 @@ configure `/etc/msmtprc` on the Parent.
 
 `packaging/installer/methods/offline.md`: `kickstart.sh --prepare-offline-install-source DIR` on an
 internet machine, copy `DIR`, run `install.sh` from it. **Static builds only, no auto-update** —
-matches the TZ. Version must be pinned to a **stable** release (the clone above is the rolling
-`master`; the pin will be the latest stable tag at Stage 1).
+matches the TZ. Pinned to stable **v2.12.3** (`netdata-deploy/versions.env`); `--install-version`
+works together with `--prepare-offline-install-source`.
+
+**Netdata Cloud:** in current Netdata the installer flag `--disable-cloud` is accepted but ignored
+(`kickstart.sh`: "Cloud cannot be disabled"). The agent only connects to Cloud after it is
+**claimed**; we never claim, keep the dashboard/registry off and the network has no internet, so no
+data leaves. To be proven in the PoC with `ss -tnp` / firewall logs (no outbound attempts).
+Telemetry: `--disable-telemetry` creates `.opt-out-from-anonymous-statistics`.
+
+The Netdata API has **no authentication** of its own (bearer protection is a Cloud feature). The
+Parent API is protected by `[web] allow dashboard from = <ProxMenux IP>` plus a host firewall; the
+TZ's "read token" for ProxMenux is therefore an IP allow-list, not a token.
 
 ### 2.5 Licences
 
