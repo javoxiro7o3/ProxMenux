@@ -1,0 +1,5 @@
+# Secrets: stream keys, SMTP password, PVE tokens. Never commit.
+secrets/
+*.env
+!conf/smtp.env.example
+!versions.env
