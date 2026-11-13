@@ -91,16 +91,9 @@ merges touch as few existing lines as possible.
 **Netdata does not provide topology** (bridge membership, bond slaves, tap→VM mapping). It only
 has per-interface counters (`net.net`), with no "member of bridge X" label.
 
-➡ **Recommendation:** Network Flow keeps working exactly as today, **native, for the host where
-ProxMenux runs**. Optionally only the rx/tx numbers could be fed from Netdata later. It cannot show
-other servers' topology without a native agent there (which the TZ forbids). → **decision needed (Q3).**
+➡ **Decided:** whole-network diagram built from read-only PVE API (topology) + Netdata (rates). See §5.1.
 
-### 1.6 Build (AppImage) — offline problems
-
-`scripts/build_appimage.sh` needs the internet:
-
-| Step | Network access | Offline fix |
-|---|---|---|
+---|---|---|
 | `appimagetool` | `wget` from GitHub (cached in `~/.cache`) | ship the binary in `vendor/` |
 | `npm install --legacy-peer-deps` | npm registry | `vendor/npm-cache` (`npm ci --offline --cache`) |
 | `pip3 install --target ...` (Flask, gevent, psutil, pyotp, ...; cp311 + cp313 wheels) | PyPI | `vendor/wheels/` + `pip --no-index --find-links` |
@@ -241,31 +234,58 @@ VM `mem` = guest-reported via balloon/QEMU agent → can differ from host RSS. T
 
 | Item | Status |
 |---|---|
-| Network Flow topology (bridges/bonds/taps) | No Netdata source → keep native, local host only (Q3) |
+| Network Flow topology (bridges/bonds/taps) | No Netdata source → read-only PVE API per server (§5.1) |
 | Static hardware inventory (dmidecode: board, BIOS, DIMMs, PCI) | No source → keep native for local host; not shown for other servers |
-| VM/CT config, status, names, tags, notes, backups, control | PVE config, not metrics → keep `pvesh`/`qm`/`pct` for local host; other servers: names via cgroup resolver, status = "has cgroup metrics now" (running) / not present (stopped). **Stopped VMs on remote servers will not be visible** (no PVE API access) → Q4 |
-| RAID composition (logical drive ↔ physical drives), drive model/capacity | Depends on hpssa chart labels — **[VERIFY]** (Q5) |
+| VM/CT config, status, names, tags, notes, backups, control | PVE config, not metrics → keep `pvesh`/`qm`/`pct` for local host; other servers: inventory via read-only PVE API; stopped guests not shown (§5) |
+| RAID composition (logical drive ↔ physical drives), drive model/capacity | Depends on hpssa chart labels — **[VERIFY]** with real `ssacli` output |
 | ProxMenux health checks for PVE-specific things (updates, storage pools, backups, certificates) | Keep native |
 | SMART detail modal (full attribute table, self-test run/schedule) | Netdata has attributes as metrics, but **running a self-test** is an action → keep native |
 
 ---
 
-## 5. Open questions (need your decision)
+## 5. Decisions (2026-11-13)
 
-1. **Repo import.** `javoxiro7o3/ProxMenux` is empty. Upstream history is **2.36 GB** (AppImage binaries in history).
-   Options: (a) push full upstream history (best for future `git merge upstream`, but huge push);
-   (b) push one squashed snapshot of tag `v1.2.8` + an `UPSTREAM` file with the commit hash (small, merges done via diff);
-   (c) you create a real GitHub fork of `MacRimi/ProxMenux` and I work on its branch. **Recommended: (c), else (a).**
-2. **Where ProxMenux runs**: on a Proxmox host (needed for terminal/VM control/Network Flow) — I recommend the main host, reading the Parent over the LAN. Confirm which host.
-3. **Network Flow**: OK to keep it native for the local host only?
-4. **Remote VMs/CTs**: without PVE API access, stopped guests on other servers are invisible and VM names come from Netdata's cgroup resolver. Acceptable? (Alternative: read-only PVE API token per server — this is *not* OPNsense/iLO, but it is an extra connection; your call.)
-5. **Real hardware samples needed** (cannot be guessed):
-   `ssacli ctrl all show config detail`, `ssacli ctrl all show status`,
-   `smartctl --scan`, `smartctl -a -d cciss,0 /dev/sda`, `ipmitool sensor` (if IPMI works in-band),
-   `cat /sys/fs/cgroup/qemu.slice/*/cgroup.procs | head`, PVE version (`pveversion -v`).
-6. Existing ProxMenux own health/notification engine: keep running in parallel with Netdata alerts (duplicate emails possible), or limit it to PVE-specific checks only?
+| # | Question | Decision |
+|---|---|---|
+| 1 | Repo import | Real GitHub fork of `MacRimi/ProxMenux` with full history, work based on release tag **`v1.2.8`** (`8fe9d207`). Upstream merges via `git merge upstream/vX.Y.Z`. |
+| 2 | Where ProxMenux runs | All servers have equal priority. ProxMenux runs on **one Proxmox host** (default: srv-01, configurable). Being on a PVE host is only needed for the local terminal / local VM control; all multi-server data comes from Netdata + PVE API, so the choice of host does not change the monitoring view. |
+| 3 | Network Flow | Must show the **whole network**: every server, its NICs/bonds/bridges and its **running** VMs/CTs. See §5.1. |
+| 4 | Remote guest inventory | **Read-only PVE API token per server** (role `PVEAuditor`). Stopped guests are not shown. |
+| 5 | Hardware samples | User will collect them on site (`ssacli`, `smartctl`, `ipmitool`, `pveversion`). Parsers/alerts for hpssa stay **[VERIFY]** until then. |
+| 6 | ProxMenux own notifications | Keep running **in parallel** with Netdata email alerts. |
 
-## 6. Next step (Stage 0 PoC — needs a host)
+### 5.1 Whole-network diagram (consequence of decisions 3 + 4)
+
+Netdata alone cannot draw topology, but together with the read-only PVE API it can:
+
+| Diagram element | Source |
+|---|---|
+| Servers | list of configured PVE endpoints ↔ Netdata nodes (joined by host label `pve_host`) |
+| Physical NICs, bonds (slaves), bridges (ports), VLANs | PVE API `GET /nodes/{node}/network` (fields `type`, `bond_slaves`, `bridge_ports`, `vlan-raw-device`) |
+| Running VMs/CTs and which bridge each NIC is on | PVE API `GET /nodes/{node}/qemu` + `/lxc` (status) and `.../{vmid}/config` (`netN: ...,bridge=vmbr0,tag=..`) |
+| Live rx/tx per link | Netdata `net.net` per interface on that host's child: physical NIC / bond / bridge / `tapNNNiM` (VM) / `vethNNNiM` (CT) — tap/veth name encodes vmid + NIC index, so mapping is exact |
+| Link state / speed | Netdata `net.operstate`, `net.speed` [VERIFY context names] |
+
+The existing `network-flow.tsx` layout (NICs → host → bridges → guests) is reused; the new data
+shape adds an outer "server" level. The current single-host view keeps working as the
+"local server" case. PVE API calls are cached (inventory changes rarely: 30–60 s TTL);
+only the rates come from Netdata at 1–5 s.
+
+PVE API connection details: HTTPS to each host's `:8006`, token `user@pve!proxmenux` with
+`PVEAuditor` on `/`, secret in a mode-600 file, server certificate pinned / internal CA.
+This is **not** OPNsense or iLO, so it is within the TZ rules.
+
+Effect on the VM/CT section: names, vmid, type, status, vCPU/maxmem come from the PVE API;
+real CPU/RAM/IO/net usage still comes from Netdata `cgroup.*` (host view) as required.
+
+## 6. Open items
+
+* Hardware command outputs (decision 5) — needed before hpssa/smartctl alert rules and RAID UI are finalised.
+* SMTP parameters from the partner.
+* Parent VM/CT location and OS (Debian 12/13) on server 1.
+* List of guests with Docker (where to install guest children).
+
+## 7. Next step
 
 On one DL380 Gen10 (no internet): install Netdata static offline, enable `hpssa`, `smartctl`
 (with `cciss` devices), `ipmi`, `sensors`; dump `/api/v3/contexts` and `/api/v3/data` for those
