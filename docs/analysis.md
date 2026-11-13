@@ -154,7 +154,7 @@ node/guest in **one** HTTP call, cache it for 1 s, and serve all browser polls f
 Note: `hpssa` collector exposes **status/temperature only**; it does not expose model, capacity or
 which physical drives make up which logical drive as metrics. Those may be available as **chart
 labels** — **[VERIFY]** in `/api/v3/contexts` output on a real host. If not, the RAID composition
-("qaysi disklardan tuzilgani") is a gap (see Q5).
+("qaysi disklardan tuzilgani") is a gap (needs real `ssacli` output).
 
 ### 2.3 Alerts
 
