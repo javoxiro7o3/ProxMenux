@@ -153,7 +153,7 @@ def parse_grouped(data):
 
 
 def parse_series(data):
-    """json2 response -> {"labels": [...names], "times": [...], "series": [[...], ...]}"""
+    """json2 response -> {"labels": [...names], "times": [...ascending], "series": [[...], ...]}"""
     try:
         names = data["view"]["dimensions"]["names"]
         rows = data["result"]["data"]
@@ -161,7 +161,8 @@ def parse_series(data):
     except (KeyError, TypeError):
         return {"labels": [], "times": [], "series": [], "units": None}
     times, series = [], [[] for _ in names]
-    for row in rows:
+    # Netdata returns the newest row first; charts need oldest -> newest.
+    for row in sorted(rows, key=lambda r: r[0]):
         times.append(row[0])
         for i in range(len(names)):
             cell = row[i + 1] if i + 1 < len(row) else None
