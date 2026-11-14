@@ -32,7 +32,7 @@ Secrets (`secrets/`, SMTP password, stream keys, PVE tokens) never go into git.
 ## 1. Prepare the bundle (internet machine, Debian matching the Parent)
 
 ```bash
-./prepare-offline.sh /media/usb/proxmenux-bundle
+SSACLI_DEB=~/Downloads/ssacli_<version>_amd64.deb ./prepare-offline.sh /media/usb/proxmenux-bundle
 ```
 
 Copy the directory to the internal network, then on each target:

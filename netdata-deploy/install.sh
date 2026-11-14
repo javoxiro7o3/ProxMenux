@@ -259,7 +259,16 @@ GOD="$ND_ETC/go.d"
 if [ "$ROLE" = host ]; then
     # HPE Smart Array. Runs `ssacli ctrl all show config detail` through
     # Netdata's setuid helper ndsudo, so no sudoers entry is needed.
-    command -v ssacli >/dev/null 2>&1 || warn "ssacli not found: RAID controller/array/logical drive status will be missing until the HPE ssacli .deb is installed (see README)"
+    if ! command -v ssacli >/dev/null 2>&1; then
+        deb="$(ls "$HERE"/../hpe/ssacli_*.deb 2>/dev/null | sort -V | tail -1 || true)"
+        if [ -n "$deb" ]; then
+            log "installing $(basename "$deb") from the offline bundle"
+            dpkg -i "$deb" || die "dpkg -i $deb failed"
+            mark_changed
+        else
+            warn "ssacli not found and no hpe/ssacli_*.deb in the bundle: RAID controller/array/logical drive status will be missing"
+        fi
+    fi
     cat <<'EOF' | write_if_changed "$GOD/hpssa.conf" 644 "root:$ND_GROUP"
 # Managed by ProxMenux netdata-deploy.
 jobs:
