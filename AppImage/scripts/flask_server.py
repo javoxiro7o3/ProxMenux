@@ -92,6 +92,7 @@ from flask_auth_routes import auth_bp  # noqa: E402
 from flask_proxmenux_routes import proxmenux_bp  # noqa: E402
 from flask_pbs_routes import pbs_bp  # noqa: E402
 from flask_monitor_links_routes import monitor_links_bp  # noqa: E402
+from flask_fleet_routes import fleet_bp  # noqa: E402  # ProxMenux fork: Netdata multi-server views
 from pbs_manager import get_platform, is_pbs_host  # noqa: E402
 from flask_security_routes import security_bp  # noqa: E402
 from flask_notification_routes import notification_bp  # noqa: E402
@@ -205,6 +206,7 @@ app.register_blueprint(notification_bp)
 app.register_blueprint(oci_bp)
 app.register_blueprint(audit_bp)
 app.register_blueprint(vm_backup_bp)
+app.register_blueprint(fleet_bp)  # ProxMenux fork
 
 # Initialize terminal / WebSocket routes
 init_terminal_routes(app)
