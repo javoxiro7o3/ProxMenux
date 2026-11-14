@@ -301,9 +301,34 @@ This is **not** OPNsense or iLO, so it is within the TZ rules.
 Effect on the VM/CT section: names, vmid, type, status, vCPU/maxmem come from the PVE API;
 real CPU/RAM/IO/net usage still comes from Netdata `cgroup.*` (host view) as required.
 
+## 5.2 First server sample (host `main`, 2026-11-14)
+
+| Item | Result | Consequence |
+|---|---|---|
+| PVE | `pve-manager 9.2.2`, kernel `7.0.2-6-pve`, Debian 13 (trixie), `smartmontools 7.5`, `zfsutils-linux 2.4.2` | ProxMenux AppImage runs on cp313 (supported). Parent VM: Debian 13 recommended, msmtp debs from trixie. |
+| `ssacli` | **not installed**, no internet | `hpssa` collector has no data until the HPE `ssacli` .deb is carried in the same way as the Netdata bundle. Without it: no controller / cache battery / array / logical-drive status and no RAID-degraded alert. |
+| `smartctl --scan` | `/dev/sda`..`/dev/sdd`, type `scsi` | Either 4 HPE logical volumes (Smart Array in RAID mode) or 4 disks in HBA mode — not decidable from this output. `smartctl -i /dev/sda` shows vendor/product (`HPE LOGICAL VOLUME` = RAID mode). |
+| `smartctl -d cciss,0` | not tested: typed `cciss,o` (letter o) instead of `cciss,0` | Re-run. If it works, physical disk SMART/temperature is available without `ssacli`. |
+| `ipmitool` | not installed | **Not needed**: Netdata ships its own Go `ipmi.plugin` (setuid, reads `/dev/ipmi0` directly). Only the kernel driver `ipmi_si`/`ipmi_devintf` is required (in the PVE kernel). |
+| lm-sensors | not checked | **Not needed**: Netdata `debugfs.plugin` has a vendored libsensors reading `/sys/class/hwmon`. |
+
+Also confirmed in the Netdata source: `hpssa`, `smartctl` and `docker` go.d collectors are **enabled by
+default** (no `Disabled` flag; `go.d.conf` `default_run: yes`), so a job file is enough.
+
+Monitoring without `ssacli` (fallback if it can never be brought in):
+
+| Need | Without ssacli |
+|---|---|
+| physical disk health, temperature, SMART attributes | `smartctl -d cciss,N` via the `smartctl` collector — **if** the controller driver (`smartpqi` on Gen10 P408i/P816i, `hpsa` on older) passes it through [VERIFY] |
+| logical drive degraded / rebuilding, cache battery | **no source** in Netdata. Would need a small custom collector reading the controller — out of scope / needs a decision |
+| failed physical disk | indirect: disappears from cciss scan or SMART failed |
+
+`netdata-deploy/collect-hw-info.sh` gathers everything above in one read-only run (no installs).
+
 ## 6. Open items
 
-* Hardware command outputs (decision 5) — needed before hpssa/smartctl alert rules and RAID UI are finalised.
+* `ssacli` .deb brought in via the offline bundle, or the decision to run without it (§5.2).
+* Output of `netdata-deploy/collect-hw-info.sh` from one host (ideally two).
 * SMTP parameters from the partner.
 * Parent VM/CT location and OS (Debian 12/13) on server 1.
 * List of guests with Docker (where to install guest children).

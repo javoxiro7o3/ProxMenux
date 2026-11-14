@@ -41,9 +41,21 @@ Copy the directory to the internal network, then on each target:
 cd proxmenux-bundle && sha256sum -c SHA256SUMS
 ```
 
-HPE `ssacli` is not redistributable by us: download the `.deb` from HPE on the
-internet machine, put it in the bundle and install it on each PVE host with
-`dpkg -i ssacli-*.deb`.
+Not on a stock PVE host and not installable there without internet, so carry them in
+the bundle:
+
+* **HPE `ssacli`** (required for RAID controller / array / logical drive / cache battery
+  status): download the Debian `.deb` from HPE (Management Component Pack repository) on the
+  internet machine, put it in the bundle, install on each PVE host with `dpkg -i ssacli_*.deb`.
+  It is a single self-contained package. Without it the `hpssa` collector stays idle.
+* `ipmitool` and `lm-sensors` are **not** needed: Netdata's static build has its own IPMI
+  plugin (reads `/dev/ipmi0`) and a built-in libsensors.
+
+Before installing, run the read-only inventory on one host and keep the output:
+
+```bash
+./collect-hw-info.sh > hw-info-$(hostname).txt 2>&1
+```
 
 ## 2. Stream keys
 

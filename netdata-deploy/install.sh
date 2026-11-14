@@ -259,7 +259,7 @@ GOD="$ND_ETC/go.d"
 if [ "$ROLE" = host ]; then
     # HPE Smart Array. Runs `ssacli ctrl all show config detail` through
     # Netdata's setuid helper ndsudo, so no sudoers entry is needed.
-    command -v ssacli >/dev/null 2>&1 || warn "ssacli not found: install the HPE ssacli .deb, hpssa collector will stay idle"
+    command -v ssacli >/dev/null 2>&1 || warn "ssacli not found: RAID controller/array/logical drive status will be missing until the HPE ssacli .deb is installed (see README)"
     cat <<'EOF' | write_if_changed "$GOD/hpssa.conf" 644 "root:$ND_GROUP"
 # Managed by ProxMenux netdata-deploy.
 jobs:
