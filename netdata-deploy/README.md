@@ -136,6 +136,34 @@ Creates `proxmenux@pve!monitor` with role `PVEAuditor` and prints the secret onc
 plus the certificate fingerprint to pin. These go into the ProxMenux host's secrets
 file (Stage 2).
 
+## 8. Connect ProxMenux Monitor (the fork)
+
+On the ProxMenux host, as root:
+
+```bash
+install -d -m 700 ~/.config/proxmenux-monitor
+cat > ~/.config/proxmenux-monitor/fleet.json <<'EOF'
+{
+  "data_source": "netdata",
+  "refresh_seconds": 2,
+  "netdata": {"parent_url": "http://<parent-ip>:19999", "timeout": 3},
+  "pve": [
+    {"name": "srv-01", "url": "https://<srv-01-ip>:8006",
+     "token_id": "proxmenux@pve!monitor", "token_secret": "<secret>",
+     "fingerprint": "<AA:BB:...>"}
+  ]
+}
+EOF
+chmod 600 ~/.config/proxmenux-monitor/fleet.json
+```
+
+* `name` must equal the Netdata host name of that server (`--name` of `install.sh --role host`).
+* The file is re-read automatically when it changes; no restart needed.
+* `DATA_SOURCE=native` (environment) or `"data_source": "native"` turns the multi-server
+  views off. In `netdata` mode an unreachable Parent is shown as an error in the UI;
+  ProxMenux never falls back to its own collectors silently.
+* The UI section is **Fleet → All servers**.
+
 ## Verify
 
 ```bash
