@@ -6,10 +6,11 @@ import { useEffect, useState, useCallback } from "react"
 // items of the Node and Admin dropdowns keep their canonical order —
 // grouped items move as a single unit.
 
-export type TabId = "overview" | "apps" | "vms" | "node" | "backup" | "terminal" | "admin"
+export type TabId = "overview" | "fleet" | "apps" | "vms" | "node" | "backup" | "terminal" | "admin"
 
 export const DEFAULT_TAB_ORDER: TabId[] = [
   "overview",
+  "fleet",  // ProxMenux fork: multi-server views (Netdata)
   "apps",
   "vms",
   "node",
@@ -68,6 +69,7 @@ export function writeTabOrder(order: TabId[]): void {
 // dashboard lands on a real tab, not a group header.
 const GROUP_FIRST_CHILD: Record<TabId, string> = {
   overview: "overview",
+  fleet:    "fleet-servers",
   apps:     "apps",
   vms:      "vms",
   node:     "storage",

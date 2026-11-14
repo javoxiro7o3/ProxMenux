@@ -174,7 +174,9 @@
     "node": "Node",
     "admin": "Admin",
     "menu": "Navigation Menu",
-    "audit": "Audit & Report"
+    "audit": "Audit & Report",
+    "fleet": "Fleet",
+    "allServers": "All servers"
   },
   "status": {
     "healthy": "Healthy",
@@ -7165,5 +7167,34 @@
     "unknownContentType": "unknown content type",
     "invalidJson": "Invalid JSON response from {endpoint}",
     "unauthorized": "Unauthorized: {endpoint}"
+  },
+  "fleet": {
+    "servers": "Servers",
+    "online": "Online",
+    "offline": "Offline",
+    "alerts": "Alerts (crit / warn)",
+    "server": "Server",
+    "status": "Status",
+    "network": "Network",
+    "diskIo": "Disk I/O",
+    "guests": "VM / CT",
+    "uptime": "Uptime",
+    "lastData": "Last data",
+    "live": "Live",
+    "filesystems": "Filesystems",
+    "search": "Search servers…",
+    "filter": {
+      "all": "All",
+      "online": "Online",
+      "offline": "Offline"
+    },
+    "loading": "Loading servers from Netdata…",
+    "errorTitle": "Netdata data unavailable",
+    "showingLast": "Showing the last data received",
+    "pveError": "PVE API error",
+    "noServers": "No Proxmox servers stream to the Netdata Parent yet. Install the host child with netdata-deploy/install.sh --role host.",
+    "otherNodes": "Other Netdata nodes",
+    "footer": "Source: Netdata Parent {parent} · refreshes every {seconds}s",
+    "sourceNote": "Values are measured by Netdata on the server (host view). CPU % counts all non-idle time; RAM excludes page cache and buffers."
   }
 }

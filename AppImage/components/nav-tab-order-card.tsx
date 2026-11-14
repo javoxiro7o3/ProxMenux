@@ -9,7 +9,7 @@ import {
   DatabaseBackup,
   GripVertical,
   Grid3x3,
-  LayoutDashboard,
+  LayoutDashboard, Globe,
   Layers,
   RotateCcw,
   Server,
@@ -38,6 +38,7 @@ type TabMeta = {
 
 const META: Record<TabId, TabMeta> = {
   overview: { id: "overview", Icon: LayoutDashboard, labelKey: "navigation.overview",        hasDropdown: false },
+  fleet:    { id: "fleet",    Icon: Globe,           labelKey: "navigation.fleet",           hasDropdown: true  },
   apps:     { id: "apps",     Icon: Grid3x3,         labelKey: "navigation.apps",            hasDropdown: false },
   vms:      { id: "vms",      Icon: Boxes,           labelKey: "navigation.virtualMachines", hasDropdown: false },
   node:     { id: "node",     Icon: Server,          labelKey: "navigation.node",            hasDropdown: true  },

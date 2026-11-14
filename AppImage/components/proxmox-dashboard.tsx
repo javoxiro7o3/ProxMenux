@@ -19,6 +19,7 @@ import { Profile } from "./profile"
 import { About } from "./about"
 import { BackupTab } from "./backup-tab"
 import { PBSPanel } from "./pbs-panel"
+import { FleetServers } from "./fleet-servers"  // ProxMenux fork
 import { MonitorSwitcher } from "./monitor-switcher"
 import { OnboardingCarousel } from "./onboarding-carousel"
 import { HealthStatusModal } from "./health-status-modal"
@@ -35,6 +36,7 @@ import {
   ListChecks,
   Menu,
   LayoutDashboard,
+  Globe,
   HardDrive,
   NetworkIcon,
   Boxes,
@@ -442,6 +444,7 @@ function MonitorDashboard({ product }: { product: Product }) {
   const getActiveTabLabel = () => {
     switch (activeTab) {
       case "overview":  return t("navigation.overview")
+      case "fleet-servers": return t("navigation.allServers")
       case "datastores": return t("pbs.datastores")
       case "pbs-tasks": return t("pbs.tasksTab")
       case "apps":      return t("navigation.apps")
@@ -659,6 +662,11 @@ function MonitorDashboard({ product }: { product: Product }) {
               // pattern macOS Settings uses inside a category: the
               // crumb shows where you are, the chevron tells you the
               // siblings are one click away.
+              // ProxMenux fork: multi-server views fed by the Netdata Parent.
+              const FLEET_ITEMS = [
+                { value: "fleet-servers", label: t("navigation.allServers"), Icon: Server, default: true },
+              ]
+              const activeFleetItem = FLEET_ITEMS.find(i => i.value === activeTab)
               const NODE_ITEMS = [
                 { value: "storage",  label: t("navigation.storage"),  Icon: HardDrive,   default: false },
                 { value: "network",  label: t("navigation.network"),  Icon: NetworkIcon, default: false },
@@ -745,12 +753,13 @@ function MonitorDashboard({ product }: { product: Product }) {
                   case "vms":      return renderDirect("vms",      Boxes,           t("navigation.virtualMachines"))
                   case "backup":   return renderDirect("backup",   DatabaseBackup,  t("navigation.backup"))
                   case "terminal": return renderDirect("terminal", Terminal,        t("navigation.terminal"))
+                  case "fleet":    return renderDropdown("fleet", FLEET_ITEMS, activeFleetItem !== undefined, activeFleetItem ? activeFleetItem.Icon : Globe, activeFleetItem ? activeFleetItem.label : t("navigation.fleet"))
                   case "node":     return renderDropdown("node",  NODE_ITEMS,  isNodeActive,  NodeTriggerIcon,  NodeTriggerLabel)
                   case "admin":    return renderDropdown("admin", ADMIN_ITEMS, isAdminActive, AdminTriggerIcon, AdminTriggerLabel)
                 }
               }
               return (
-                <TabsList className={`hidden lg:grid w-full ${isPbs ? "grid-cols-5" : "grid-cols-7"} bg-card border border-border`}>
+                <TabsList className={`hidden lg:grid w-full ${isPbs ? "grid-cols-5" : "grid-cols-8"} bg-card border border-border`}>
                   {tabOrder.map(renderTop)}
                 </TabsList>
               )
@@ -817,6 +826,11 @@ function MonitorDashboard({ product }: { product: Product }) {
                           case "vms":      return btn("vms",      Boxes,           t("navigation.virtualMachines"))
                           case "backup":   return btn("backup",   DatabaseBackup,  t("navigation.backup"))
                           case "terminal": return btn("terminal", Terminal,        t("navigation.terminal"))
+                          case "fleet": return (
+                            <React.Fragment key="fleet">
+                              {btn("fleet-servers", Server, t("navigation.allServers"))}
+                            </React.Fragment>
+                          )
                           case "node": return (
                             <React.Fragment key="node">
                               {btn("storage",  HardDrive,   t("navigation.storage"))}
@@ -864,6 +878,12 @@ function MonitorDashboard({ product }: { product: Product }) {
           <TabsContent value="overview" forceMount className="space-y-4 md:space-y-6 mt-0 data-[state=inactive]:hidden">
             <SystemOverview key={`overview-${componentKey}`} product={product} />
           </TabsContent>
+
+          {!isPbs && (
+            <TabsContent value="fleet-servers" className="space-y-4 md:space-y-6 mt-0">
+              <FleetServers key={`fleet-servers-${componentKey}`} />
+            </TabsContent>
+          )}
 
           {isPbs && (
             <TabsContent value="datastores" className="space-y-4 md:space-y-6 mt-0">
