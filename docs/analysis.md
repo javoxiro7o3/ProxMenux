@@ -325,9 +325,28 @@ Monitoring without `ssacli` (fallback if it can never be brought in):
 
 `netdata-deploy/collect-hw-info.sh` gathers everything above in one read-only run (no installs).
 
+## 5.3 Sandbox verification with real Netdata 2.12.3 (2026-11-14)
+
+Done in a Linux container (not a PVE host, no RAID/IPMI hardware):
+
+| Check | Result |
+|---|---|
+| `prepare-offline.sh` downloads the pinned v2.12.3 static build | ✅ (~330 MB). Two script bugs found and fixed: kickstart strips `/` from the target path; a failed download was reported as success |
+| Offline install from the bundle (`install.sh --non-interactive --disable-telemetry --no-updates`) | ✅ `netdata v2.12.3`, type `kickstart-static` |
+| Our `netdata.conf` accepted | ✅ ML off, registry off, dbengine tiers/retention as set, host labels present |
+| Netdata Cloud | ✅ not connected: `cloud.status=available, reason "Agent is not claimed yet"` |
+| Parent `stream.conf` (per-child UUID key) + child stream | ✅ child `srv-child` streamed to parent, link established |
+| Host labels propagate to Parent | ✅ `/api/v3/nodes` shows `proxmenux_role`, `pve_host`, `pve_vmid` per node |
+| Our health files load on the Parent | ✅ `proxmenux_cpu_usage`, `proxmenux_ram_usage`, `proxmenux_disk_space_usage` active; stock `10min_cpu_usage`, `ram_in_use`, `disk_space_usage` disabled; no health config errors logged. HPE/SMART templates load but have no instances without the hardware |
+| One request for all nodes | ✅ `/api/v3/data?scope_nodes=*&contexts=system.cpu&group_by=node&points=1&format=json2` → one column per node UUID; `group_by=node,dimension` gives `used/cached/buffers/free` per node |
+
+Not verified yet (needs real servers): hpssa, smartctl cciss, IPMI, cgroup names of VMs/CTs,
+Docker, replication after a network cut, `streaming_disconnected` (fires only after the parent
+has been up 30 min), email.
+
 ## 6. Open items
 
-* `ssacli` .deb brought in via the offline bundle, or the decision to run without it (§5.2).
+* `ssacli` .deb: user can bring files in → added to the bundle (`SSACLI_DEB=...`), installed by `install.sh --role host`.
 * Output of `netdata-deploy/collect-hw-info.sh` from one host (ideally two).
 * SMTP parameters from the partner.
 * Parent VM/CT location and OS (Debian 12/13) on server 1.
