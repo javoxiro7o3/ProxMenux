@@ -71,6 +71,14 @@ class ParseTests(unittest.TestCase):
         self.assertIn("used|disk_space./", disk[CHILD])
         self.assertIn("avail|disk_space./", disk[CHILD])
 
+    def test_series_oldest_first(self):
+        # Netdata returns newest row first; charts need ascending time.
+        d = {"view": {"dimensions": {"names": ["user"]}, "units": "percentage"},
+             "result": {"data": [[30, [3, 0, 0]], [20, [2, 0, 0]], [10, [1, 0, 0]]]}}
+        s = netdata_client.parse_series(d)
+        self.assertEqual(s["times"], [10, 20, 30])
+        self.assertEqual(s["series"][0], [1, 2, 3])
+
     def test_empty_or_broken(self):
         self.assertEqual(parse_grouped({}), {})
         self.assertEqual(parse_grouped({"view": {"dimensions": {"ids": ["x"]}}, "result": {"data": []}}), {})
